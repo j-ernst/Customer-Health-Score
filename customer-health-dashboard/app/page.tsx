@@ -80,6 +80,7 @@ export default function CustomerHealthDashboard() {
         const data = await fetchCustomerData()
         console.log("Received data:", data.length, "records")
         setCustomerData(data)
+        setAllColumns(Object.keys(data[0] || {}))
       } catch (error) {
         console.error("Failed to load customer data:", error)
       } finally {
@@ -261,15 +262,14 @@ export default function CustomerHealthDashboard() {
     return sortDirection === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
   }
 
-  const toggleColumnVisibility = (column: string, checked: boolean) => {
+  const toggleColumnVisibility = (column: string) => {
     setVisibleColumns(prev => {
-      if (checked) {
-        // Add column if not already visible
-        return prev.includes(column) ? prev : [...prev, column]
-      } else {
+      if (prev.includes(column)) {
         // Don't allow hiding essential columns
         if (ESSENTIAL_COLUMNS.includes(column)) return prev
         return prev.filter(col => col !== column)
+      } else {
+        return [...prev, column]
       }
     })
   }
@@ -441,7 +441,7 @@ export default function CustomerHealthDashboard() {
                     Spalten ({visibleColumns.length})
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-80 z-50 bg-white shadow-lg">
+                <PopoverContent className="w-80">
                   <div className="space-y-4">
                     <h4 className="font-medium">Spalten anzeigen</h4>
                     {Object.entries(COLUMN_GROUPS).map(([groupName, groupColumns]) => (
@@ -449,29 +449,14 @@ export default function CustomerHealthDashboard() {
                         <h5 className="text-sm font-medium text-neutral-600">{groupName}</h5>
                         {groupColumns.filter(col => allColumns.includes(col)).map(column => (
                           <div key={column} className="flex items-center space-x-2">
-                            <input
-                              type="checkbox"
+                            <Checkbox
                               id={column}
                               checked={visibleColumns.includes(column)}
-                              onChange={(e) => toggleColumnVisibility(column, e.target.checked)}
+                              onCheckedChange={() => toggleColumnVisibility(column)}
                               disabled={ESSENTIAL_COLUMNS.includes(column)}
-                              className="h-4 w-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed"
                             />
-                            <label 
-                              htmlFor={column} 
-                              className={`text-sm cursor-pointer select-none ${
-                                ESSENTIAL_COLUMNS.includes(column) ? 'text-neutral-400' : 'text-neutral-700'
-                              }`}
-                              onClick={() => {
-                                if (!ESSENTIAL_COLUMNS.includes(column)) {
-                                  toggleColumnVisibility(column, !visibleColumns.includes(column))
-                                }
-                              }}
-                            >
+                            <label htmlFor={column} className="text-sm">
                               {COLUMN_CONFIG[column]?.label || column}
-                              {ESSENTIAL_COLUMNS.includes(column) && (
-                                <span className="text-xs text-neutral-400 ml-1">(Required)</span>
-                              )}
                             </label>
                           </div>
                         ))}
