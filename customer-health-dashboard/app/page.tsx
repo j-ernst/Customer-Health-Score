@@ -17,17 +17,19 @@ type SortDirection = "asc" | "desc"
 // Essential columns that should always be visible
 const ESSENTIAL_COLUMNS = [
   'company_id',
+  'company',
   'health_score', 
   'churn_probability',
-  'risk_level',
+  'num_contacts',
+  //'risk_level',
   'tenure_days',
   'days_since_last_activity'
 ]
 
 // Column groups for better organization
 const COLUMN_GROUPS = {
-  'Essential': ['company_id', 'health_score', 'churn_probability', 'risk_level'],
-  'Customer Info': ['tenure_days', 'is_new_customer', 'is_mature_customer', 'days_to_contract_end', 'contract_expiring_soon'],
+  'Essential': ['company_id', 'company', 'health_score', 'churn_probability' /*'risk_level'*/],
+  'Customer Info': ['tenure_days', 'num_contacts', 'is_new_customer', 'is_mature_customer', 'days_to_contract_end', 'contract_expiring_soon'],
   'Activity Baseline': ['baseline_type', 'baseline_weekly_avg', 'max_weekly_activity'],
   'Weekly Activity': ['activities_w_1', 'activities_w_2', 'activities_w_3', 'activities_w_4', 'total_4weeks', 'avg_weekly_4weeks'],
   'Activity Trends': ['week_1_vs_2_change', 'week_2_vs_3_change', 'week_3_vs_4_change', 'activity_correlation'],
@@ -39,10 +41,12 @@ const COLUMN_GROUPS = {
 // Column configuration for better display
 const COLUMN_CONFIG: Record<string, any> = {
   company_id: { label: "Kundennummer", type: "text", width: "w-32" },
+  company: { label: "Firmenname", type: "text", width: "w-48" },
   health_score: { label: "Health Score", type: "health_score", format: (val: number) => val?.toFixed(1) || "0.0" },
   churn_probability: { label: "Churn Risiko", type: "percentage", format: (val: number) => `${(val * 100).toFixed(1)}%` },
-  risk_level: { label: "Risikokategorie", type: "risk_category" },
-  tenure_days: { label: "Vertragsdauer (Tage)", type: "number", format: (val: number) => val?.toLocaleString() || "0" },
+  //risk_level: { label: "Risikokategorie", type: "risk_category" },
+  tenure_days: { label: "Bestandsdauer", type: "number", format: (val: number) => val?.toLocaleString() || "0" },
+  num_contacts: { label: "Anzahl Support-Tickets", type: "number", format: (val: number) => val?.toLocaleString() || "0" },
   is_new_customer: { label: "Neukunde", type: "boolean", format: (val: any) => val ? "✓" : "✗" },
   is_mature_customer: { label: "Stammkunde", type: "boolean", format: (val: any) => val ? "✓" : "✗" },
   days_to_contract_end: { label: "Tage bis Vertragsende", type: "number", format: (val: number) => val?.toLocaleString() || "0" },
@@ -366,8 +370,8 @@ export default function CustomerHealthDashboard() {
         {/* Header */}
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-bold text-neutral-900">Customer Health Dashboard</h1>
-          <p className="text-neutral-600">Monitor customer health scores and proactively reduce churn risk</p>
-          <p className="text-sm text-neutral-500">{customerData.length} Kunden geladen</p>
+          {/*<p className="text-neutral-600">Monitor customer health scores and proactively reduce churn risk</p>
+          <p className="text-sm text-neutral-500">{customerData.length} Kunden geladen</p>*/}
         </div>
 
         {/* Summary Cards */}
@@ -376,7 +380,7 @@ export default function CustomerHealthDashboard() {
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-red-600 flex items-center gap-2">
                 <AlertCircle className="h-4 w-4" />
-                Critical Risk
+                Kritisches Risiko
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -389,7 +393,7 @@ export default function CustomerHealthDashboard() {
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-orange-600 flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4" />
-                At Risk
+                Gefährdet
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -402,7 +406,7 @@ export default function CustomerHealthDashboard() {
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-green-600 flex items-center gap-2">
                 <CheckCircle className="h-4 w-4" />
-                Healthy
+                Gesund
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -427,13 +431,13 @@ export default function CustomerHealthDashboard() {
           <CardHeader>
             <div className="flex justify-between items-center">
               <div>
-                <CardTitle>Customer Health Metriken</CardTitle>
-                <CardDescription>
+                <CardTitle>Customer Health Kennzahlen</CardTitle>
+                <CardDescription className="mt-2">
                   {totalItems} Kunden gefunden • Seite {currentPage} von {totalPages}
                 </CardDescription>
               </div>
               
-              {/* Column Visibility Control */}
+{/* Column Visibility Control */}
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" size="sm">
@@ -441,27 +445,35 @@ export default function CustomerHealthDashboard() {
                     Spalten ({visibleColumns.length})
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-80">
-                  <div className="space-y-4">
+                <PopoverContent className="w-80 max-h-96 overflow-hidden p-0">
+                  <div className="p-4 border-b bg-white">
                     <h4 className="font-medium">Spalten anzeigen</h4>
-                    {Object.entries(COLUMN_GROUPS).map(([groupName, groupColumns]) => (
-                      <div key={groupName} className="space-y-2">
-                        <h5 className="text-sm font-medium text-neutral-600">{groupName}</h5>
-                        {groupColumns.filter(col => allColumns.includes(col)).map(column => (
-                          <div key={column} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={column}
-                              checked={visibleColumns.includes(column)}
-                              onCheckedChange={() => toggleColumnVisibility(column)}
-                              disabled={ESSENTIAL_COLUMNS.includes(column)}
-                            />
-                            <label htmlFor={column} className="text-sm">
-                              {COLUMN_CONFIG[column]?.label || column}
-                            </label>
+                  </div>
+                  <div className="max-h-80 overflow-y-auto p-4">
+                    <div className="space-y-4">
+                      {Object.entries(COLUMN_GROUPS).map(([groupName, groupColumns]) => (
+                        <div key={groupName} className="space-y-2">
+                          <h5 className="text-sm font-bold text-neutral-600 bg-neutral-100 px-2 py-1 rounded">
+                            {groupName}
+                          </h5>
+                          <div className="space-y-1">
+                            {groupColumns.filter(col => allColumns.includes(col)).map(column => (
+                              <div key={column} className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={column}
+                                  checked={visibleColumns.includes(column)}
+                                  onCheckedChange={() => toggleColumnVisibility(column)}
+                                  disabled={ESSENTIAL_COLUMNS.includes(column)}
+                                />
+                                <label htmlFor={column} className="text-sm cursor-pointer flex-1">
+                                  {COLUMN_CONFIG[column]?.label || column}
+                                </label>
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
-                    ))}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </PopoverContent>
               </Popover>
@@ -612,11 +624,8 @@ export default function CustomerHealthDashboard() {
             )}
 
             {/* Data Info */}
-            <div className="mt-4 p-3 bg-neutral-50 rounded-lg">
+            <div className="mt-4 bg-neutral-50 rounded-lg">
               <div className="text-xs text-neutral-500 space-y-1">
-                <p>
-                  <strong>Performance:</strong> Zeigt {ITEMS_PER_PAGE} Kunden pro Seite für optimale Geschwindigkeit
-                </p>
                 <p>
                   <strong>Sichtbare Spalten:</strong> {visibleColumns.length} von {allColumns.length} verfügbaren Spalten
                 </p>

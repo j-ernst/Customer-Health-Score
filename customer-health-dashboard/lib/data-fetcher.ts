@@ -1,5 +1,6 @@
 export interface CustomerHealthData {
-  company_id: string
+  company_id: string,
+  company: string,
   tenure_days: number
   is_new_customer: number
   is_mature_customer: number
@@ -49,6 +50,7 @@ export interface CustomerHealthData {
   churn_probability: number
   health_score: number
   risk_level: string
+  num_contacts: number
 }
 
 export async function fetchCustomerData(): Promise<CustomerHealthData[]> {
@@ -57,7 +59,7 @@ export async function fetchCustomerData(): Promise<CustomerHealthData[]> {
 
     const response = await fetch(
       //"/customer_health_scores_random_forest_short.csv",
-      "/customer_health_scores_random_forest_2.csv",
+      "/customer_health_scores_random_forest_final.csv",
     )
 
     if (!response.ok) {
@@ -154,6 +156,7 @@ export async function fetchCustomerData(): Promise<CustomerHealthData[]> {
               "zero_activity_period",
               "churn_probability",
               "health_score",
+              "num_contacts"
             ].includes(header)
           ) {
             const numValue = Number.parseFloat(value)
