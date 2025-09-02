@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback } from "react"
-import { Search, ArrowUpDown, ArrowUp, ArrowDown, AlertTriangle, CheckCircle, AlertCircle, Loader2, Settings } from "lucide-react"
+import { Search, ArrowUpDown, ArrowUp, ArrowDown, AlertTriangle, CheckCircle, AlertCircle, Loader2, Settings, X } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -216,38 +216,53 @@ export default function CustomerHealthDashboard() {
   // Filter and sort data with pagination
   const { paginatedData, totalPages, totalItems } = useMemo(() => {
     let filtered = customerData.filter((customer) => {
-      const searchLower = searchTerm.toLowerCase()
-      return Object.values(customer).some(value => 
-        String(value).toLowerCase().includes(searchLower)
-      )
+      if (!searchTerm) return true
+      
+      const searchLower = searchTerm.toLowerCase().trim()
+      
+      // Only search in company_id and company fields
+      const companyId = customer.company_id
+      const companyName = customer.company
+      
+      // Check company ID (exact match)
+      if (companyId !== null && companyId !== undefined) {
+        if (String(companyId).toLowerCase() === searchLower) return true
+      }
+      
+      // Check company name (contains match)
+      if (companyName !== null && companyName !== undefined) {
+        if (String(companyName).toLowerCase().includes(searchLower)) return true
+      }
+      
+      return false
     })
-
+  
+    // Rest of your existing sorting and pagination logic remains the same
     if (sortField && filtered.length > 0) {
       filtered.sort((a, b) => {
         const aValue = a[sortField]
         const bValue = b[sortField]
-
+  
         if (typeof aValue === "string" && typeof bValue === "string") {
           return sortDirection === "asc" ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue)
         }
-
+  
         if (typeof aValue === "number" && typeof bValue === "number") {
           return sortDirection === "asc" ? aValue - bValue : bValue - aValue
         }
-
-        // Handle mixed types
+  
         const aStr = String(aValue || "")
         const bStr = String(bValue || "")
         return sortDirection === "asc" ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr)
       })
     }
-
+  
     const totalItems = filtered.length
     const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE)
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
     const endIndex = startIndex + ITEMS_PER_PAGE
     const paginatedData = filtered.slice(startIndex, endIndex)
-
+  
     return { paginatedData, totalPages, totalItems }
   }, [customerData, searchTerm, sortField, sortDirection, currentPage])
 
@@ -481,18 +496,31 @@ export default function CustomerHealthDashboard() {
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-2">
-                <Search className="h-4 w-4 text-neutral-500" />
-                <Input
-                  placeholder="Suche nach Kundennummer, Health Score, oder anderen Werten..."
-                  value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value)
-                    setCurrentPage(1) // Reset to first page when searching
-                  }}
-                  className="max-w-md"
-                />
-              </div>
+            <div className="flex items-center space-x-2">
+  <Search className="h-4 w-4 text-neutral-500" />
+  <Input
+    placeholder="Suche nach Kundennummer oder Firmenname..."
+    value={searchTerm}
+    onChange={(e) => {
+      setSearchTerm(e.target.value)
+      setCurrentPage(1)
+    }}
+    className="max-w-md"
+  />
+  {searchTerm && (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={() => {
+        setSearchTerm("")
+        setCurrentPage(1)
+      }}
+      className="h-8 w-8 p-0"
+    >
+      <X className="h-4 w-4" />
+    </Button>
+  )}
+</div>
               
               {/* Pagination Controls */}
               <div className="flex items-center space-x-2">
