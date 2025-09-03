@@ -348,10 +348,10 @@ export default function CustomerHealthDashboard() {
 
   return (
     <div className="min-h-screen bg-neutral-50 p-6" suppressHydrationWarning>
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="max-w-[2400px] w-[80vw] mx-auto space-y-2 min-h-screen">
         {/* Logo */}
         <div className="flex justify-center">
-          <svg className="w-32 p-0 m-0" width="376" height="103" viewBox="0 0 376 103" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg className="w-32 p-0 m-2" width="376" height="50" viewBox="0 0 376 103" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M128.245 68.8135C125.108 67.0984 122.671 64.7064 120.888 61.6825C119.106 58.6586 118.226 55.206 118.226 51.3697C118.226 47.5334 119.106 44.0807 120.888 41.0568C122.671 38.033 125.108 35.6635 128.245 33.9484C131.382 32.256 134.947 31.3984 138.942 31.3984C142.936 31.3984 145.666 32.1206 148.442 33.5422C151.218 34.9639 153.384 37.04 154.918 39.748L149.525 43.2232C148.284 41.3502 146.772 39.9511 144.944 39.0033C143.116 38.0781 141.108 37.6042 138.874 37.6042C136.64 37.6042 133.999 38.1683 131.968 39.2967C129.915 40.425 128.313 42.0498 127.162 44.1484C126.011 46.2471 125.424 48.6391 125.424 51.3697C125.424 54.1002 126.011 56.5599 127.162 58.6586C128.313 60.7573 129.915 62.3595 131.968 63.5104C134.022 64.6387 136.324 65.2029 138.874 65.2029C141.424 65.2029 143.116 64.729 144.944 63.8037C146.772 62.8785 148.307 61.4568 149.525 59.5838L154.918 62.9914C153.384 65.6993 151.24 67.7754 148.442 69.2422C145.666 70.6865 142.484 71.4312 138.942 71.4312C134.925 71.386 131.359 70.5285 128.245 68.8135Z" fill="#2D3644"/>
             <path d="M163.562 16.3242H170.67V71.2056H163.562V16.3242Z" fill="#2D3644"/>
             <path d="M190.122 68.8135C187.008 67.0984 184.594 64.7064 182.834 61.6825C181.073 58.6586 180.216 55.206 180.216 51.3697C180.216 47.5334 181.096 44.0807 182.834 41.0568C184.594 38.033 187.008 35.6635 190.122 33.9484C193.237 32.256 196.734 31.3984 200.616 31.3984C204.497 31.3984 207.995 32.256 211.087 33.9484C214.178 35.6409 216.593 38.0104 218.33 41.0568C220.091 44.0807 220.948 47.5334 220.948 51.3697C220.948 55.206 220.068 58.6586 218.33 61.6825C216.57 64.7064 214.156 67.0984 211.087 68.8135C207.995 70.5285 204.52 71.4086 200.616 71.4086C196.734 71.3861 193.237 70.5285 190.122 68.8135ZM207.408 63.4427C209.394 62.2918 210.974 60.667 212.102 58.5683C213.23 56.4697 213.795 54.0776 213.795 51.3471C213.795 48.6166 213.23 46.2245 212.102 44.1259C210.974 42.0272 209.394 40.425 207.408 39.2741C205.4 38.1458 203.166 37.5816 200.638 37.5816C198.111 37.5816 195.877 38.1458 193.868 39.2741C191.883 40.4024 190.303 42.0272 189.13 44.1259C187.979 46.2245 187.392 48.6166 187.392 51.3471C187.392 54.0776 187.979 56.4697 189.13 58.5683C190.28 60.667 191.86 62.2918 193.868 63.4427C195.877 64.5936 198.111 65.1803 200.638 65.1803C203.166 65.1803 205.4 64.5936 207.408 63.4427Z" fill="#2D3644"/>
@@ -384,7 +384,7 @@ export default function CustomerHealthDashboard() {
 
         {/* Header */}
         <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold text-neutral-900">Customer Health Dashboard</h1>
+          <h1 className="text-3xl font-bold text-neutral-900 my-8">Customer Health Dashboard</h1>
           {/*<p className="text-neutral-600">Monitor customer health scores and proactively reduce churn risk</p>
           <p className="text-sm text-neutral-500">{customerData.length} Kunden geladen</p>*/}
         </div>
@@ -546,14 +546,14 @@ export default function CustomerHealthDashboard() {
               </div>
             </div>
 
-            <div className="rounded-md border overflow-x-auto">
+            <div className="rounded-md border max-h-[50vh] overflow-auto relative">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-blue-50">
                     {visibleColumns.map((column) => {
                       const config = COLUMN_CONFIG[column] || { label: column }
                       return (
-                        <TableHead key={column} className={config.width || ""}>
+                        <TableHead key={column} className={config.width || ""} sticky>
                           <Button
                             variant="ghost"
                             onClick={() => handleSort(column)}
