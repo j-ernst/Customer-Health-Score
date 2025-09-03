@@ -42,7 +42,13 @@ const COLUMN_GROUPS = {
 const COLUMN_CONFIG: Record<string, any> = {
   company_id: { label: "Kundennummer", type: "text", width: "w-32" },
   company: { label: "Firmenname", type: "text", width: "w-48" },
-  health_score: { label: "Health Score", type: "health_score", format: (val: number) => val?.toFixed(1) || "0.0" },
+  health_score: { label: "Health Score", type: "health_score",   format: (val: number) => {
+    const roundHealthScore = (score: number) => {
+      if (typeof score !== 'number') return 0
+      return Math.round(score / 10) * 10
+    }
+    return roundHealthScore(val).toString()
+  }},
   churn_probability: { label: "Churn Risiko", type: "percentage", format: (val: number) => `${(val * 100).toFixed(1)}%` },
   //risk_level: { label: "Risikokategorie", type: "risk_category" },
   tenure_days: { label: "Bestandsdauer", type: "number", format: (val: number) => val?.toLocaleString() || "0" },
@@ -69,8 +75,10 @@ export default function CustomerHealthDashboard() {
   const [allColumns, setAllColumns] = useState<string[]>([])
   const [visibleColumns, setVisibleColumns] = useState<string[]>(ESSENTIAL_COLUMNS)
   const [searchTerm, setSearchTerm] = useState("")
-  const [sortField, setSortField] = useState<string>("health_score")
-  const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
+  const [sortCriteria, setSortCriteria] = useState([
+    { field: "health_score", direction: "desc" },
+    { field: "days_since_last_activity", direction: "asc" }
+  ])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
@@ -99,6 +107,11 @@ export default function CustomerHealthDashboard() {
     if (score >= 70) return "bg-green-100 text-green-800 border-green-200"
     if (score >= 40) return "bg-orange-100 text-orange-800 border-orange-200"
     return "bg-red-100 text-red-800 border-red-200"
+  }
+
+  const roundHealthScore = (score: number) => {
+    if (typeof score !== 'number') return 0
+    return Math.round(score / 10) * 10
   }
 
   const getHealthScoreLabel = (score: number) => {
@@ -237,23 +250,36 @@ export default function CustomerHealthDashboard() {
       return false
     })
   
-    // Rest of your existing sorting and pagination logic remains the same
-    if (sortField && filtered.length > 0) {
+    // Multi-level sorting
+    if (sortCriteria.length > 0 && filtered.length > 0) {
       filtered.sort((a, b) => {
-        const aValue = a[sortField]
-        const bValue = b[sortField]
-  
-        if (typeof aValue === "string" && typeof bValue === "string") {
-          return sortDirection === "asc" ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue)
+        for (const criteria of sortCriteria) {
+          let aValue = a[criteria.field]
+          let bValue = b[criteria.field]
+          
+          // Special handling for health_score - round to nearest 10
+          if (criteria.field === 'health_score') {
+            aValue = roundHealthScore(aValue)
+            bValue = roundHealthScore(bValue)
+          }
+          
+          let comparison = 0
+          
+          if (typeof aValue === "string" && typeof bValue === "string") {
+            comparison = aValue.localeCompare(bValue)
+          } else if (typeof aValue === "number" && typeof bValue === "number") {
+            comparison = aValue - bValue
+          } else {
+            const aStr = String(aValue || "")
+            const bStr = String(bValue || "")
+            comparison = aStr.localeCompare(bStr)
+          }
+          
+          if (comparison !== 0) {
+            return criteria.direction === "asc" ? comparison : -comparison
+          }
         }
-  
-        if (typeof aValue === "number" && typeof bValue === "number") {
-          return sortDirection === "asc" ? aValue - bValue : bValue - aValue
-        }
-  
-        const aStr = String(aValue || "")
-        const bStr = String(bValue || "")
-        return sortDirection === "asc" ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr)
+        return 0
       })
     }
   
@@ -264,22 +290,58 @@ export default function CustomerHealthDashboard() {
     const paginatedData = filtered.slice(startIndex, endIndex)
   
     return { paginatedData, totalPages, totalItems }
-  }, [customerData, searchTerm, sortField, sortDirection, currentPage])
+  }, [customerData, searchTerm, sortCriteria, currentPage])
 
-  const handleSort = (field: string) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc")
+const handleSort = (field: string) => {
+  setSortCriteria(prev => {
+    const existingIndex = prev.findIndex(criteria => criteria.field === field)
+    
+    if (existingIndex >= 0) {
+      const newCriteria = [...prev]
+      
+      if (existingIndex === 0) {
+        // Primary sort - toggle direction (asc <-> desc)
+        newCriteria[0] = {
+          ...newCriteria[0],
+          direction: newCriteria[0].direction === "asc" ? "desc" : "asc"
+        }
+      } else {
+        // Secondary sort - cycle through asc -> desc -> remove
+        const currentDirection = newCriteria[existingIndex].direction
+        if (currentDirection === "asc") {
+          newCriteria[existingIndex] = { ...newCriteria[existingIndex], direction: "desc" }
+        } else {
+          // Remove secondary sort when it's desc
+          newCriteria.splice(existingIndex, 1)
+        }
+      }
+      return newCriteria
     } else {
-      setSortField(field)
-      setSortDirection("asc")
+      // New field - add as secondary sort starting with "asc"
+      if (prev.length >= 2) {
+        return [prev[0], { field, direction: "asc" }]
+      } else {
+        return [...prev, { field, direction: "asc" }]
+      }
     }
-    setCurrentPage(1) // Reset to first page when sorting
-  }
+  })
+  setCurrentPage(1)
+}
 
-  const getSortIcon = (field: string) => {
-    if (sortField !== field) return <ArrowUpDown className="h-3 w-3" />
-    return sortDirection === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-  }
+const getSortIcon = (field: string) => {
+  const criteria = sortCriteria.find(c => c.field === field)
+  if (!criteria) return <ArrowUpDown className="h-3 w-3" />
+  
+  const isPrimary = sortCriteria[0]?.field === field
+  const Icon = criteria.direction === "asc" ? ArrowUp : ArrowDown
+  
+  return (
+    <div className="flex items-center gap-1">
+      <Icon className={`h-3 w-3 ${isPrimary ? 'text-blue-600' : 'text-gray-500'}`} />
+      {!isPrimary && <span className="text-xs text-gray-500">2</span>}
+    </div>
+  )
+}
 
   const toggleColumnVisibility = (column: string) => {
     setVisibleColumns(prev => {
@@ -557,7 +619,11 @@ export default function CustomerHealthDashboard() {
                           <Button
                             variant="ghost"
                             onClick={() => handleSort(column)}
-                            className="h-auto p-0 font-semibold text-blue-700 hover:text-blue-800"
+                            className={`h-auto p-0 font-semibold hover:text-blue-800 ${
+                              sortCriteria.some(c => c.field === column) 
+                                ? 'text-blue-700' 
+                                : 'text-gray-700'
+                            }`}
                           >
                             {config.label || column} {getSortIcon(column)}
                           </Button>
