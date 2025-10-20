@@ -1,6 +1,7 @@
 export interface CustomerHealthData {
   company_id: string,
   company: string,
+  quantity: number,
   tenure_days: number
   is_new_customer: number
   is_mature_customer: number
@@ -59,7 +60,8 @@ export async function fetchCustomerData(): Promise<CustomerHealthData[]> {
 
     const response = await fetch(
       //"/customer_health_scores_random_forest_short.csv",
-      "/customer_health_scores_random_forest_final.csv",
+      //"/customer_health_scores_random_forest_final.csv",
+      "/merged_data.csv"
     )
 
     if (!response.ok) {
@@ -111,6 +113,7 @@ export async function fetchCustomerData(): Promise<CustomerHealthData[]> {
             [
               "tenure_days",
               "is_new_customer",
+              "quantity",
               "is_mature_customer",
               "days_to_contract_end",
               "contract_expiring_soon",
