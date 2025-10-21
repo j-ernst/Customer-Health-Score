@@ -38,6 +38,7 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover";
 import { fetchCustomerData, type CustomerHealthData } from "@/lib/data-fetcher";
+import AdvancedFilter from "@/components/ui/advanced-filter";
 
 type CustomerData = Record<string, any>;
 type SortDirection = "asc" | "desc";
@@ -217,6 +218,22 @@ export default function CustomerHealthDashboard() {
     const [error, setError] = useState<string | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
 
+        // Add this state after your existing useState declarations
+    const [filteredData, setFilteredData] = useState<CustomerData[]>([]);
+
+    // Extract numeric columns from COLUMN_CONFIG
+    const numericColumns = useMemo(() => {
+      return allColumns.filter(col => {
+        const config = COLUMN_CONFIG[col];
+        return config && (config.type === 'number' || config.type === 'percentage' || config.type === 'health_score' || config.type === 'days_since');
+      });
+    }, [allColumns]);
+
+    // Initialize filteredData when customerData loads
+    useEffect(() => {
+      setFilteredData(customerData);
+    }, [customerData]);
+
     // Load CSV data
     useEffect(() => {
         const loadData = async () => {
@@ -388,7 +405,7 @@ export default function CustomerHealthDashboard() {
 
     // Filter and sort data with pagination
     const { paginatedData, totalPages, totalItems } = useMemo(() => {
-        let filtered = customerData.filter((customer) => {
+        let filtered = filteredData.filter((customer) => {
             if (!searchTerm) return true;
 
             const searchLower = searchTerm.toLowerCase().trim();
@@ -460,7 +477,7 @@ export default function CustomerHealthDashboard() {
         const paginatedData = filtered.slice(startIndex, endIndex);
 
         return { paginatedData, totalPages, totalItems };
-    }, [customerData, searchTerm, sortCriteria, currentPage]);
+    }, [filteredData, searchTerm, sortCriteria, currentPage]);
 
     const handleSort = (field: string) => {
         setSortCriteria((prev) => {
@@ -958,6 +975,12 @@ export default function CustomerHealthDashboard() {
                                 </Button>
                             </div>
                         </div>
+
+                        <AdvancedFilter 
+                          data={customerData}
+                          onFilterChange={setFilteredData}
+                          numericColumns={numericColumns}
+                        />
 
                         <div className="rounded-md border max-h-[50vh] overflow-auto relative">
                           <Table style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
