@@ -47,71 +47,59 @@ type SortDirection = "asc" | "desc";
 const ESSENTIAL_COLUMNS = [
     "company_id",
     "company",
-    "health_score",
+    "priority_rank",
+    "priority_score",
+    "priority_label",
     "churn_probability",
-    "quantity",
-    "num_contacts",
-    //'risk_level',
+    "risk_category",
+    "num_licenses",
+    "ARR",
     "tenure_days",
     "days_since_last_activity",
 ];
 
 // Column groups for better organization
 const COLUMN_GROUPS = {
-    Essential: [
+    "Priority & Risk": [
+        "priority_rank",
+        "priority_score",
+        "priority_label",
+        "churn_probability",
+        "risk_category",
+        "primary_risk_factor",
+        "recommended_action",
+    ],
+    "Account Info": [
         "company_id",
         "company",
-        "health_score",
-        "churn_probability" /*'risk_level'*/,
-        "quantity",
+        "value_tier",
+        "product",
+        "contract_type",
     ],
-    "Customer Info": [
+    "Revenue & Licenses": [
+        "num_licenses",
+        "ARR",
+        "estimated_mrr",
+        "total_spent",
+        "spent_per_tenure_day",
+    ],
+    "Tenure & Activity": [
         "tenure_days",
-        "num_contacts",
-        "is_new_customer",
-        "is_mature_customer",
-        "days_to_contract_end",
-        "contract_expiring_soon",
-    ],
-    "Activity Baseline": [
-        "baseline_type",
-        "baseline_weekly_avg",
-        "max_weekly_activity",
+        "days_since_last_activity",
+        "activity_trend",
     ],
     "Weekly Activity": [
-        "activities_w_1",
-        "activities_w_2",
-        "activities_w_3",
-        "activities_w_4",
-        "total_4weeks",
-        "avg_weekly_4weeks",
+        "week_1_activities",
+        "week_2_activities",
+        "week_3_activities",
+        "week_4_activities",
+        "activities_last_4w",
+        "avg_activity_last_4w",
     ],
-    "Activity Trends": [
-        "week_1_vs_2_change",
-        "week_2_vs_3_change",
-        "week_3_vs_4_change",
-        "activity_correlation",
-    ],
-    "Activity Ratios": [
-        "current_vs_baseline_ratio",
-        "current_vs_max_ratio",
-        "activity_consistency",
-    ],
-    "Recent Activity": [
-        "activities_last_30d",
-        "activities_last_7d",
-        "activities_last_3d",
-        "days_since_last_activity",
-    ],
-    "Behavior Flags": [
-        "strong_decline",
-        "moderate_decline",
-        "stable_trend",
-        "growing_trend",
-        "no_recent_activity",
-        "sporadic_user",
-        "inactive_user",
-        "dormant_user",
+    "Activity Metrics": [
+        "total_activities",
+        "activities_per_week_baseline",
+        "activity_vs_baseline_ratio",
     ],
 };
 
@@ -119,84 +107,140 @@ const COLUMN_GROUPS = {
 const COLUMN_CONFIG: Record<string, any> = {
     company_id: { label: "Kundennummer", type: "text", width: "w-32" },
     company: { label: "Firmenname", type: "text", width: "w-48" },
-    health_score: {
-        label: "Health Score",
-        type: "health_score",
-        format: (val: number) => {
-            const roundHealthScore = (score: number) => {
-                if (typeof score !== "number") return 0;
-                return Math.round(score / 10) * 10;
-            };
-            return roundHealthScore(val).toString();
-        },
+    priority_rank: {
+        label: "Priorität Rang",
+        type: "number",
+        format: (val: number) => val?.toLocaleString() || "0",
+    },
+    priority_score: {
+        label: "Priorität Score",
+        type: "number",
+        format: (val: number) => val?.toFixed(2) || "0.00",
+    },
+    priority_label: {
+        label: "Priorität",
+        type: "priority_label",
     },
     churn_probability: {
         label: "Churn Risiko",
         type: "percentage",
         format: (val: number) => `${(val * 100).toFixed(1)}%`,
     },
-    quantity: { label: "Anzahl Lizenzen", type: "number", format: (val: number) => val?.toLocaleString() || "0" },
-    //risk_level: { label: "Risikokategorie", type: "risk_category" },
+    risk_category: {
+        label: "Risikokategorie",
+        type: "risk_category",
+    },
+    primary_risk_factor: {
+        label: "Hauptrisikofaktor",
+        type: "text",
+        width: "w-48",
+    },
+    recommended_action: {
+        label: "Empfohlene Maßnahme",
+        type: "text",
+        width: "w-64",
+    },
+    value_tier: {
+        label: "Wert-Kategorie",
+        type: "value_tier",
+    },
+    num_licenses: {
+        label: "Anzahl Lizenzen",
+        type: "number",
+        format: (val: number) => val?.toLocaleString() || "0",
+    },
+    product: {
+        label: "Produkt",
+        type: "text",
+    },
+    contract_type: {
+        label: "Vertragstyp",
+        type: "text",
+    },
+    ARR: {
+        label: "ARR",
+        type: "currency",
+        format: (val: number) => `€${val?.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}`,
+    },
+    estimated_mrr: {
+        label: "Geschätzte MRR",
+        type: "currency",
+        format: (val: number) => `€${val?.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}`,
+    },
     tenure_days: {
-        label: "Bestandsdauer",
+        label: "Bestandsdauer (Tage)",
         type: "number",
         format: (val: number) => val?.toLocaleString() || "0",
     },
-    num_contacts: {
-        label: "Anzahl Support-Tickets",
+    activities_last_4w: {
+        label: "Aktivitäten 4W",
         type: "number",
         format: (val: number) => val?.toLocaleString() || "0",
     },
-    is_new_customer: {
-        label: "Neukunde",
-        type: "boolean",
-        format: (val: any) => (val ? "✓" : "✗"),
-    },
-    is_mature_customer: {
-        label: "Stammkunde",
-        type: "boolean",
-        format: (val: any) => (val ? "✓" : "✗"),
-    },
-    days_to_contract_end: {
-        label: "Tage bis Vertragsende",
-        type: "number",
-        format: (val: number) => val?.toLocaleString() || "0",
-    },
-    contract_expiring_soon: {
-        label: "Vertrag läuft bald ab",
-        type: "boolean",
-        format: (val: any) => (val ? "⚠️ Ja" : "Nein"),
-    },
-    baseline_type: { label: "Baseline Typ", type: "text" },
-    baseline_weekly_avg: {
-        label: "Baseline Wöchentlich",
-        type: "number",
-        format: (val: number) => val?.toFixed(1) || "0.0",
-    },
-    max_weekly_activity: {
-        label: "Max. Wochenaktivität",
-        type: "number",
-        format: (val: number) => val?.toLocaleString() || "0",
+    activity_vs_baseline_ratio: {
+        label: "Aktivität vs. Baseline",
+        type: "ratio",
+        format: (val: number) => val?.toFixed(2) || "0.00",
     },
     days_since_last_activity: {
         label: "Tage seit letzter Aktivität",
         type: "days_since",
         format: (val: number) => val?.toLocaleString() || "0",
     },
-    activities_last_30d: {
-        label: "Aktivitäten 30T",
+    activity_trend: {
+        label: "Aktivitätstrend",
+        type: "activity_trend_numeric",
+        format: (val: number) => {
+            const num = Number(val) || 0;
+            if (num > 0) return "Steigend";
+            if (num < 0) return "Sinkend";
+            return "Stabil";
+        }
+    },
+    week_1_activities: {
+        label: "Woche 1",
         type: "number",
         format: (val: number) => val?.toLocaleString() || "0",
     },
-    activities_last_7d: {
-        label: "Aktivitäten 7T",
+    week_2_activities: {
+        label: "Woche 2",
         type: "number",
         format: (val: number) => val?.toLocaleString() || "0",
     },
-    activities_last_3d: {
-        label: "Aktivitäten 3T",
+    week_3_activities: {
+        label: "Woche 3",
         type: "number",
         format: (val: number) => val?.toLocaleString() || "0",
+    },
+    week_4_activities: {
+        label: "Woche 4",
+        type: "number",
+        format: (val: number) => val?.toLocaleString() || "0",
+    },
+    total_spent: {
+        label: "Gesamtausgaben",
+        type: "currency",
+        format: (val: number) => `€${val?.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}`,
+    },
+    spent_per_tenure_day: {
+        label: "Ausgaben pro Tag",
+        type: "currency",
+        format: (val: number) => `€${val?.toFixed(2)}`,
+    },
+    total_activities: {
+        label: "Gesamt Aktivitäten",
+        type: "number",
+        format: (val: number) => val?.toLocaleString() || "0",
+    },
+    activities_per_week_baseline: {
+        label: "Baseline pro Woche",
+        type: "number",
+        format: (val: number) => val?.toFixed(1) || "0.0",
+    },
+    avg_activity_last_4w: {
+        label: "Ø Aktivität 4W",
+        type: "number",
+        format: (val: number) => val?.toFixed(1) || "0.0",
     },
 };
 
@@ -210,28 +254,37 @@ export default function CustomerHealthDashboard() {
     const [visibleColumns, setVisibleColumns] =
         useState<string[]>(ESSENTIAL_COLUMNS);
     const [searchTerm, setSearchTerm] = useState("");
+    // Default sort: Priority Rank (1, 2, 3... = highest priority first),
+    // then Churn Probability (highest risk first within each priority group)
     const [sortCriteria, setSortCriteria] = useState([
-        { field: "health_score", direction: "desc" },
-        { field: "days_since_last_activity", direction: "asc" },
+        { field: "priority_rank", direction: "asc" },
+        { field: "churn_probability", direction: "desc" },
     ]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
 
-        // Add this state after your existing useState declarations
+    // Add this state after your existing useState declarations
     const [filteredData, setFilteredData] = useState<CustomerData[]>([]);
 
     // Extract numeric columns from COLUMN_CONFIG
     const numericColumns = useMemo(() => {
-      return allColumns.filter(col => {
-        const config = COLUMN_CONFIG[col];
-        return config && (config.type === 'number' || config.type === 'percentage' || config.type === 'health_score' || config.type === 'days_since');
-      });
+        return allColumns.filter((col) => {
+            const config = COLUMN_CONFIG[col];
+            return (
+                config &&
+                (config.type === "number" ||
+                    config.type === "percentage" ||
+                    config.type === "currency" ||
+                    config.type === "ratio" ||
+                    config.type === "days_since")
+            );
+        });
     }, [allColumns]);
 
     // Initialize filteredData when customerData loads
     useEffect(() => {
-      setFilteredData(customerData);
+        setFilteredData(customerData);
     }, [customerData]);
 
     // Load CSV data
@@ -242,10 +295,15 @@ export default function CustomerHealthDashboard() {
             try {
                 const data = await fetchCustomerData();
                 console.log("Received data:", data.length, "records");
+                if (data.length > 0) {
+                    console.log("First record:", data[0]);
+                    console.log("Available columns:", Object.keys(data[0]));
+                }
                 setCustomerData(data);
                 setAllColumns(Object.keys(data[0] || {}));
             } catch (error) {
                 console.error("Failed to load customer data:", error);
+                setError("Fehler beim Laden der CSV-Daten. Bitte überprüfen Sie die Datei.");
             } finally {
                 setLoading(false);
             }
@@ -254,24 +312,6 @@ export default function CustomerHealthDashboard() {
     }, []);
 
     // Helper functions
-    const getHealthScoreColor = (score: number) => {
-        if (score >= 70) return "bg-green-100 text-green-800 border-green-200";
-        if (score >= 40)
-            return "bg-orange-100 text-orange-800 border-orange-200";
-        return "bg-red-100 text-red-800 border-red-200";
-    };
-
-    const roundHealthScore = (score: number) => {
-        if (typeof score !== "number") return 0;
-        return Math.round(score / 10) * 10;
-    };
-
-    const getHealthScoreLabel = (score: number) => {
-        if (score >= 70) return "Healthy";
-        if (score >= 40) return "At Risk";
-        return "Critical";
-    };
-
     const getRiskCategoryColor = (category: string) => {
         if (!category) return "bg-gray-100 text-gray-800";
 
@@ -287,8 +327,73 @@ export default function CustomerHealthDashboard() {
                 return "bg-orange-100 text-orange-800";
             case "high":
             case "hoch":
-            case "critical risk":
+            case "critical":
             case "red":
+                return "bg-red-100 text-red-800";
+            default:
+                return "bg-gray-100 text-gray-800";
+        }
+    };
+
+    const getPriorityLabelColor = (label: string) => {
+        if (!label) return "bg-gray-100 text-gray-800";
+
+        switch (label.toLowerCase()) {
+            case "critical":
+            case "kritisch":
+                return "bg-red-100 text-red-800 border-red-300";
+            case "high":
+            case "hoch":
+                return "bg-orange-100 text-orange-800 border-orange-300";
+            case "medium":
+            case "mittel":
+                return "bg-yellow-100 text-yellow-800 border-yellow-300";
+            case "low":
+            case "niedrig":
+                return "bg-green-100 text-green-800 border-green-300";
+            default:
+                return "bg-gray-100 text-gray-800 border-gray-300";
+        }
+    };
+
+    const getValueTierColor = (tier: string) => {
+        if (!tier) return "bg-gray-100 text-gray-800";
+
+        switch (tier.toLowerCase()) {
+            case "enterprise":
+            case "premium":
+                return "bg-purple-100 text-purple-800 border-purple-300";
+            case "high":
+            case "hoch":
+                return "bg-blue-100 text-blue-800 border-blue-300";
+            case "medium":
+            case "mittel":
+                return "bg-teal-100 text-teal-800 border-teal-300";
+            case "low":
+            case "niedrig":
+                return "bg-gray-100 text-gray-800 border-gray-300";
+            default:
+                return "bg-gray-100 text-gray-800 border-gray-300";
+        }
+    };
+
+    const getTrendColor = (trend: string) => {
+        if (!trend) return "bg-gray-100 text-gray-800";
+
+        switch (trend.toLowerCase()) {
+            case "increasing":
+            case "steigend":
+            case "growing":
+                return "bg-green-100 text-green-800";
+            case "stable":
+            case "stabil":
+                return "bg-blue-100 text-blue-800";
+            case "declining":
+            case "sinkend":
+            case "decreasing":
+                return "bg-orange-100 text-orange-800";
+            case "critical":
+            case "kritisch":
                 return "bg-red-100 text-red-800";
             default:
                 return "bg-gray-100 text-gray-800";
@@ -298,7 +403,14 @@ export default function CustomerHealthDashboard() {
     const formatCellValue = (value: any, columnName: string) => {
         const config = COLUMN_CONFIG[columnName];
 
-        if (value === null || value === undefined) {
+        if (value === null || value === undefined || value === "") {
+            // Check if this is a column that should have data
+            if (typeof window !== 'undefined' && customerData.length > 0) {
+                const hasAnyData = customerData.some(c => c[columnName] != null && c[columnName] !== "");
+                if (!hasAnyData) {
+                    console.warn(`Column ${columnName} has no data in any row`);
+                }
+            }
             return "-";
         }
 
@@ -323,16 +435,14 @@ export default function CustomerHealthDashboard() {
         const formattedValue = formatCellValue(value, columnName);
 
         switch (config?.type) {
-            case "health_score":
-                const score = Number(value) || 0;
+            case "priority_label":
                 return (
-                    <div
-                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getHealthScoreColor(
-                            score
-                        )}`}
+                    <Badge
+                        variant="outline"
+                        className={`text-xs font-semibold ${getPriorityLabelColor(value)}`}
                     >
                         {formattedValue}
-                    </div>
+                    </Badge>
                 );
 
             case "risk_category":
@@ -345,17 +455,46 @@ export default function CustomerHealthDashboard() {
                     </Badge>
                 );
 
-            case "boolean":
+            case "value_tier":
                 return (
-                    <span
-                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                            value
-                                ? "bg-green-100 text-green-800"
-                                : "bg-gray-100 text-gray-800"
-                        }`}
+                    <Badge
+                        variant="outline"
+                        className={`text-xs font-semibold ${getValueTierColor(value)}`}
                     >
                         {formattedValue}
-                    </span>
+                    </Badge>
+                );
+
+            case "trend":
+                return (
+                    <Badge
+                        variant="outline"
+                        className={`text-xs ${getTrendColor(value)}`}
+                    >
+                        {formattedValue}
+                    </Badge>
+                );
+
+            case "activity_trend_numeric":
+                const trendValue = Number(value) || 0;
+                let trendLabel = "Stable";
+                let trendColor = "bg-blue-100 text-blue-800";
+                
+                if (trendValue > 0) {
+                    trendLabel = "Steigend";
+                    trendColor = "bg-green-100 text-green-800";
+                } else if (trendValue < 0) {
+                    trendLabel = "Sinkend";
+                    trendColor = "bg-orange-100 text-orange-800";
+                }
+                
+                return (
+                    <Badge
+                        variant="outline"
+                        className={`text-xs ${trendColor}`}
+                    >
+                        {trendLabel}
+                    </Badge>
                 );
 
             case "percentage":
@@ -398,6 +537,29 @@ export default function CustomerHealthDashboard() {
                     </span>
                 );
 
+            case "ratio":
+                const ratio = Number(value) || 0;
+                return (
+                    <span
+                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                            ratio < 0.5
+                                ? "bg-red-100 text-red-800"
+                                : ratio < 0.8
+                                ? "bg-orange-100 text-orange-800"
+                                : "bg-green-100 text-green-800"
+                        }`}
+                    >
+                        {formattedValue}
+                    </span>
+                );
+
+            case "currency":
+                return (
+                    <span className="text-sm font-medium text-neutral-700">
+                        {formattedValue}
+                    </span>
+                );
+
             default:
                 return <span className="text-sm">{formattedValue}</span>;
         }
@@ -435,12 +597,6 @@ export default function CustomerHealthDashboard() {
                 for (const criteria of sortCriteria) {
                     let aValue = a[criteria.field];
                     let bValue = b[criteria.field];
-
-                    // Special handling for health_score - round to nearest 10
-                    if (criteria.field === "health_score") {
-                        aValue = roundHealthScore(aValue);
-                        bValue = roundHealthScore(bValue);
-                    }
 
                     let comparison = 0;
 
@@ -485,38 +641,30 @@ export default function CustomerHealthDashboard() {
                 (criteria) => criteria.field === field
             );
 
-            if (existingIndex >= 0) {
-                const newCriteria = [...prev];
-
-                if (existingIndex === 0) {
-                    // Primary sort - toggle direction (asc <-> desc)
-                    newCriteria[0] = {
-                        ...newCriteria[0],
-                        direction:
-                            newCriteria[0].direction === "asc" ? "desc" : "asc",
-                    };
-                } else {
-                    // Secondary sort - cycle through asc -> desc -> remove
-                    const currentDirection =
-                        newCriteria[existingIndex].direction;
-                    if (currentDirection === "asc") {
-                        newCriteria[existingIndex] = {
-                            ...newCriteria[existingIndex],
-                            direction: "desc",
-                        };
-                    } else {
-                        // Remove secondary sort when it's desc
-                        newCriteria.splice(existingIndex, 1);
-                    }
-                }
-                return newCriteria;
+            if (existingIndex === 0) {
+                // Clicking on current PRIMARY sort → toggle direction
+                return [
+                    {
+                        field: prev[0].field,
+                        direction: prev[0].direction === "asc" ? "desc" : "asc",
+                    },
+                    ...(prev[1] ? [prev[1]] : []), // Keep secondary if exists
+                ];
+            } else if (existingIndex === 1) {
+                // Clicking on current SECONDARY sort → promote to primary, toggle direction
+                return [
+                    {
+                        field: prev[1].field,
+                        direction: prev[1].direction === "asc" ? "desc" : "asc",
+                    },
+                    prev[0], // Old primary becomes secondary
+                ];
             } else {
-                // New field - add as secondary sort starting with "asc"
-                if (prev.length >= 2) {
-                    return [prev[0], { field, direction: "asc" }];
-                } else {
-                    return [...prev, { field, direction: "asc" }];
-                }
+                // Clicking on a NEW column → make it primary (ASC)
+                return [
+                    { field, direction: "asc" },
+                    ...(prev[0] ? [prev[0]] : []), // Old primary becomes secondary
+                ];
             }
         });
         setCurrentPage(1);
@@ -524,7 +672,7 @@ export default function CustomerHealthDashboard() {
 
     const getSortIcon = (field: string) => {
         const criteria = sortCriteria.find((c) => c.field === field);
-        if (!criteria) return <ArrowUpDown className="h-3 w-3" />;
+        if (!criteria) return <ArrowUpDown className="h-3 w-3 text-gray-400" />;
 
         const isPrimary = sortCriteria[0]?.field === field;
         const Icon = criteria.direction === "asc" ? ArrowUp : ArrowDown;
@@ -533,10 +681,14 @@ export default function CustomerHealthDashboard() {
             <div className="flex items-center gap-1">
                 <Icon
                     className={`h-3 w-3 ${
-                        isPrimary ? "text-blue-600" : "text-gray-500"
+                        isPrimary ? "text-blue-600 font-bold" : "text-gray-500"
                     }`}
                 />
-                {!isPrimary && <span className="text-xs text-gray-500">2</span>}
+                {!isPrimary && (
+                    <span className="text-[10px] font-bold text-gray-500 bg-gray-200 rounded-full w-3 h-3 flex items-center justify-center">
+                        2
+                    </span>
+                )}
             </div>
         );
     };
@@ -555,31 +707,51 @@ export default function CustomerHealthDashboard() {
 
     // Calculate summary statistics (optimized)
     const summaryStats = useMemo(() => {
-        const critical = customerData.filter((c) => {
-            const healthScore = Number(c.health_score) || 0;
-            return healthScore < 40;
-        }).length;
+        console.log("Calculating summary stats from", customerData.length, "customers");
+        
+        if (customerData.length > 0) {
+            console.log("Sample customer data:", customerData[0]);
+            console.log("Sample risk_category values:", customerData.slice(0, 5).map(c => c.risk_category));
+        }
 
-        const atRisk = customerData.filter((c) => {
-            const healthScore = Number(c.health_score) || 0;
-            return healthScore >= 40 && healthScore < 70;
-        }).length;
+        const critical = customerData.filter(
+            (c) => {
+                const cat = c.risk_category?.toString().toLowerCase();
+                return cat === "high" || cat === "critical" || cat === "red";
+            }
+        ).length;
 
-        const healthy = customerData.filter((c) => {
-            const healthScore = Number(c.health_score) || 0;
-            return healthScore >= 70;
-        }).length;
+        const atRisk = customerData.filter(
+            (c) => {
+                const cat = c.risk_category?.toString().toLowerCase();
+                return cat === "medium" || cat === "yellow" || cat === "orange";
+            }
+        ).length;
 
-        const avgHealthScore =
+        const healthy = customerData.filter(
+            (c) => {
+                const cat = c.risk_category?.toString().toLowerCase();
+                return cat === "low" || cat === "green";
+            }
+        ).length;
+
+        const avgChurnProb =
             customerData.length > 0
                 ? customerData.reduce(
                       (sum, customer) =>
-                          sum + (Number(customer.health_score) || 0),
+                          sum + (Number(customer.churn_probability) || 0),
                       0
                   ) / customerData.length
                 : 0;
 
-        return { critical, atRisk, healthy, avgHealthScore };
+        const totalARR = customerData.reduce(
+            (sum, customer) => sum + (Number(customer.ARR) || 0),
+            0
+        );
+
+        console.log("Summary stats:", { critical, atRisk, healthy, avgChurnProb, totalARR });
+
+        return { critical, atRisk, healthy, avgChurnProb, totalARR };
     }, [customerData]);
 
     if (loading) {
@@ -745,8 +917,6 @@ export default function CustomerHealthDashboard() {
                     <h1 className="text-3xl font-bold text-neutral-900 my-8">
                         Customer Health Dashboard
                     </h1>
-                    {/*<p className="text-neutral-600">Monitor customer health scores and proactively reduce churn risk</p>
-          <p className="text-sm text-neutral-500">{customerData.length} Kunden geladen</p>*/}
                 </div>
 
                 {/* Summary Cards */}
@@ -763,7 +933,7 @@ export default function CustomerHealthDashboard() {
                                 {summaryStats.critical}
                             </div>
                             <p className="text-xs text-neutral-500 mt-1">
-                                Health Score &lt; 40
+                                High/Critical Risk
                             </p>
                         </CardContent>
                     </Card>
@@ -780,7 +950,7 @@ export default function CustomerHealthDashboard() {
                                 {summaryStats.atRisk}
                             </div>
                             <p className="text-xs text-neutral-500 mt-1">
-                                Health Score 40-69
+                                Medium Risk
                             </p>
                         </CardContent>
                     </Card>
@@ -797,7 +967,7 @@ export default function CustomerHealthDashboard() {
                                 {summaryStats.healthy}
                             </div>
                             <p className="text-xs text-neutral-500 mt-1">
-                                Health Score ≥ 70
+                                Low Risk
                             </p>
                         </CardContent>
                     </Card>
@@ -805,15 +975,15 @@ export default function CustomerHealthDashboard() {
                     <Card>
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-medium text-blue-600">
-                                Ø Health Score
+                                Ø Churn Risiko
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold text-blue-600">
-                                {summaryStats.avgHealthScore.toFixed(1)}
+                                {(summaryStats.avgChurnProb * 100).toFixed(1)}%
                             </div>
                             <p className="text-xs text-neutral-500 mt-1">
-                                Durchschnitt
+                                Gesamt ARR: €{summaryStats.totalARR.toLocaleString()}
                             </p>
                         </CardContent>
                     </Card>
@@ -976,14 +1146,19 @@ export default function CustomerHealthDashboard() {
                             </div>
                         </div>
 
-                        <AdvancedFilter 
-                          data={customerData}
-                          onFilterChange={setFilteredData}
-                          numericColumns={numericColumns}
+                        <AdvancedFilter
+                            data={customerData}
+                            onFilterChange={setFilteredData}
+                            numericColumns={numericColumns}
                         />
 
                         <div className="rounded-md border max-h-[50vh] overflow-auto relative">
-                          <Table style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
+                            <Table
+                                style={{
+                                    borderCollapse: "separate",
+                                    borderSpacing: 0,
+                                }}
+                            >
                                 <TableHeader>
                                     <TableRow className="bg-blue-50">
                                         {visibleColumns.map((column) => {
@@ -996,7 +1171,6 @@ export default function CustomerHealthDashboard() {
                                                     className={
                                                         config.width || ""
                                                     }
-                                                    sticky
                                                 >
                                                     <Button
                                                         variant="ghost"
@@ -1161,12 +1335,23 @@ export default function CustomerHealthDashboard() {
                         )}
 
                         {/* Data Info */}
-                        <div className="mt-4 bg-neutral-50 rounded-lg">
+                        <div className="mt-4 bg-neutral-50 rounded-lg p-3">
                             <div className="text-xs text-neutral-500 space-y-1">
                                 <p>
                                     <strong>Sichtbare Spalten:</strong>{" "}
                                     {visibleColumns.length} von{" "}
                                     {allColumns.length} verfügbaren Spalten
+                                </p>
+                                <p>
+                                    <strong>Sortierung:</strong> Klicken Sie auf eine Spalte zum Sortieren. 
+                                    {sortCriteria.length > 0 && (
+                                        <span>
+                                            {" "}Aktuell: <strong>{COLUMN_CONFIG[sortCriteria[0].field]?.label || sortCriteria[0].field}</strong> ({sortCriteria[0].direction === "asc" ? "aufsteigend" : "absteigend"})
+                                            {sortCriteria[1] && (
+                                                <>, dann <strong>{COLUMN_CONFIG[sortCriteria[1].field]?.label || sortCriteria[1].field}</strong> ({sortCriteria[1].direction === "asc" ? "aufsteigend" : "absteigend"})</>
+                                            )}
+                                        </span>
+                                    )}
                                 </p>
                                 <p>
                                     <strong>Letzte Aktualisierung:</strong>{" "}

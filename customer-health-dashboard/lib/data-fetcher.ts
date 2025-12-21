@@ -1,190 +1,201 @@
 export interface CustomerHealthData {
-  company_id: string,
-  company: string,
-  quantity: number,
-  tenure_days: number
-  is_new_customer: number
-  is_mature_customer: number
-  days_to_contract_end: number
-  contract_expiring_soon: number
-  baseline_type: string
-  baseline_weekly_avg: number
-  max_weekly_activity: number
-  activities_w_1: number
-  activities_w_2: number
-  activities_w_3: number
-  activities_w_4: number
-  total_4weeks: number
-  avg_weekly_4weeks: number
-  week_1_vs_2_change: number
-  week_2_vs_3_change: number
-  week_3_vs_4_change: number
-  activity_correlation: number
-  current_vs_baseline_ratio: number
-  current_vs_max_ratio: number
-  weeks_with_activity: number
-  weeks_with_zero_activity: number
-  consecutive_zero_weeks: number
-  activity_consistency: number
-  total_activities: number
-  activities_last_30d: number
-  activities_last_7d: number
-  activities_last_3d: number
-  unique_tasks_30d: number
-  unique_days_active_30d: number
-  unique_days_active_7d: number
-  days_since_last_activity: number
-  activities_per_day_30d: number
-  activities_per_active_day_30d: number
-  strong_decline: number
-  moderate_decline: number
-  stable_trend: number
-  growing_trend: number
-  no_recent_activity: number
-  sporadic_user: number
-  inactive_user: number
-  dormant_user: number
-  below_baseline: number
-  well_below_max: number
-  highly_inconsistent: number
-  zero_activity_period: number
-  churn_probability: number
-  health_score: number
-  risk_level: string
-  num_contacts: number
+  company_id: string;
+  company: string;
+  priority_rank: number;
+  priority_score: number;
+  priority_label: string;
+  churn_probability: number;
+  risk_category: string;
+  primary_risk_factor: string;
+  recommended_action: string;
+  value_tier: string;
+  num_licenses: number;
+  product: string;
+  contract_type: string;
+  ARR: number;
+  estimated_mrr: number;
+  tenure_days: number;
+  activities_last_4w: number;
+  activity_vs_baseline_ratio: number;
+  days_since_last_activity: number;
+  activity_trend: number;  // Changed from string to number
+  week_1_activities: number;
+  week_2_activities: number;
+  week_3_activities: number;
+  week_4_activities: number;
+  total_spent: number;
+  spent_per_tenure_day: number;
+  total_activities: number;
+  activities_per_week_baseline: number;
+  avg_activity_last_4w: number;
 }
 
 export async function fetchCustomerData(): Promise<CustomerHealthData[]> {
   try {
-    console.log("Starting to fetch customer data...")
+    console.log("Starting to fetch customer data...");
+    console.log("Fetching from: /merged_data.csv");
+    console.log("Make sure the CSV file is in the /public directory");
 
-    const response = await fetch(
-      //"/customer_health_scores_random_forest_short.csv",
-      //"/customer_health_scores_random_forest_final.csv",
-      "/merged_data.csv"
-    )
+    const response = await fetch("/customer_churn_dashboard.csv");
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+      throw new Error(`HTTP error! status: ${response.status}. Make sure merged_data.csv is in your /public directory`);
     }
 
-    const csvText = await response.text()
-    console.log("CSV text length:", csvText.length)
-    console.log("First 500 characters:", csvText.substring(0, 500))
+    const csvText = await response.text();
+    console.log("CSV text length:", csvText.length);
+    console.log("First 500 characters:", csvText.substring(0, 500));
 
     if (!csvText || csvText.trim().length === 0) {
-      throw new Error("Empty CSV data received")
+      throw new Error("Empty CSV data received");
     }
 
+    // Robust CSV parser that handles quoted fields with commas and escaped quotes
+    const parseCSVLine = (line: string): string[] => {
+      const result: string[] = [];
+      let current = "";
+      let inQuotes = false;
+      let i = 0;
+
+      while (i < line.length) {
+        const char = line[i];
+        const nextChar = line[i + 1];
+
+        if (char === '"' && inQuotes && nextChar === '"') {
+          // Escaped quote within quoted field
+          current += '"';
+          i += 2;
+          continue;
+        }
+
+        if (char === '"') {
+          // Toggle quote state
+          inQuotes = !inQuotes;
+          i++;
+          continue;
+        }
+
+        if (char === "," && !inQuotes) {
+          // Field separator
+          result.push(current.trim());
+          current = "";
+          i++;
+          continue;
+        }
+
+        // Regular character
+        current += char;
+        i++;
+      }
+
+      // Push the last field
+      result.push(current.trim());
+      
+      return result;
+    };
+
     // Split by newlines and handle different line endings
-    const lines = csvText.trim().split(/\r?\n/)
-    console.log("Number of lines:", lines.length)
+    const lines = csvText.trim().split(/\r?\n/);
+    console.log("Number of lines:", lines.length);
 
     if (lines.length < 2) {
-      throw new Error("CSV must have at least a header and one data row")
+      throw new Error("CSV must have at least a header and one data row");
     }
 
     // Parse headers
-    const headers = lines[0].split(",").map((h) => h.trim().replace(/"/g, ""))
-    console.log("Headers:", headers)
+    const headers = parseCSVLine(lines[0]);
+    console.log("Headers:", headers);
+    console.log("Number of headers:", headers.length);
 
-    const data: CustomerHealthData[] = []
+    const data: CustomerHealthData[] = [];
 
     for (let i = 1; i < lines.length; i++) {
       try {
-        const line = lines[i].trim()
-        if (!line) continue // Skip empty lines
+        const line = lines[i].trim();
+        if (!line) continue; // Skip empty lines
 
-        // Handle CSV parsing with potential commas in quoted fields
-        const values = line.split(",").map((v) => v.trim().replace(/"/g, ""))
+        const values = parseCSVLine(line);
 
         if (values.length !== headers.length) {
-          console.warn(`Row ${i} has ${values.length} values but expected ${headers.length}`)
-          continue
+          console.warn(
+            `Row ${i} has ${values.length} values but expected ${headers.length}. Skipping.`
+          );
+          continue;
         }
 
-        const row: any = {}
+        const row: any = {};
 
         headers.forEach((header, headerIndex) => {
-          const value = values[headerIndex]
+          const value = values[headerIndex];
 
           // Parse numeric fields
           if (
             [
-              "tenure_days",
-              "is_new_customer",
-              "quantity",
-              "is_mature_customer",
-              "days_to_contract_end",
-              "contract_expiring_soon",
-              "baseline_weekly_avg",
-              "max_weekly_activity",
-              "activities_w_1",
-              "activities_w_2",
-              "activities_w_3",
-              "activities_w_4",
-              "total_4weeks",
-              "avg_weekly_4weeks",
-              "week_1_vs_2_change",
-              "week_2_vs_3_change",
-              "week_3_vs_4_change",
-              "activity_correlation",
-              "current_vs_baseline_ratio",
-              "current_vs_max_ratio",
-              "weeks_with_activity",
-              "weeks_with_zero_activity",
-              "consecutive_zero_weeks",
-              "activity_consistency",
-              "total_activities",
-              "activities_last_30d",
-              "activities_last_7d",
-              "activities_last_3d",
-              "unique_tasks_30d",
-              "unique_days_active_30d",
-              "unique_days_active_7d",
-              "days_since_last_activity",
-              "activities_per_day_30d",
-              "activities_per_active_day_30d",
-              "strong_decline",
-              "moderate_decline",
-              "stable_trend",
-              "growing_trend",
-              "no_recent_activity",
-              "sporadic_user",
-              "inactive_user",
-              "dormant_user",
-              "below_baseline",
-              "well_below_max",
-              "highly_inconsistent",
-              "zero_activity_period",
+              "priority_rank",
+              "priority_score",
               "churn_probability",
-              "health_score",
-              "num_contacts"
+              "num_licenses",
+              "ARR",
+              "estimated_mrr",
+              "tenure_days",
+              "activities_last_4w",
+              "activity_vs_baseline_ratio",
+              "days_since_last_activity",
+              "activity_trend",
+              "week_1_activities",
+              "week_2_activities",
+              "week_3_activities",
+              "week_4_activities",
+              "total_spent",
+              "spent_per_tenure_day",
+              "total_activities",
+              "activities_per_week_baseline",
+              "avg_activity_last_4w",
             ].includes(header)
           ) {
-            const numValue = Number.parseFloat(value)
-            row[header] = isNaN(numValue) ? 0 : numValue
+            // Skip empty strings
+            if (value === "" || value === null || value === undefined) {
+              row[header] = null;
+            } else {
+              const numValue = Number.parseFloat(value);
+              row[header] = isNaN(numValue) ? null : numValue;
+            }
           } else {
-            row[header] = value || ""
+            row[header] = value || "";
           }
-        })
+        });
 
         // Ensure company_id is always a string
         if (row.company_id !== undefined) {
-          row.company_id = row.company_id.toString()
+          row.company_id = row.company_id.toString();
         }
 
-        data.push(row as CustomerHealthData)
+        data.push(row as CustomerHealthData);
+        
+        // Log first few records for debugging
+        if (i <= 3) {
+          console.log(`Row ${i} sample:`, {
+            company_id: row.company_id,
+            company: row.company,
+            priority_rank: row.priority_rank,
+            risk_category: row.risk_category,
+            churn_probability: row.churn_probability,
+            ARR: row.ARR
+          });
+        }
       } catch (rowError) {
-        console.warn(`Error parsing row ${i}:`, rowError)
+        console.warn(`Error parsing row ${i}:`, rowError);
       }
     }
 
-    console.log(`Successfully loaded ${data.length} customer records`)
-    console.log("Sample record:", data[0])
-    return data
+    console.log(`Successfully loaded ${data.length} customer records`);
+    if (data.length > 0) {
+      console.log("First complete record:", data[0]);
+      console.log("All column names:", Object.keys(data[0]));
+    }
+    return data;
   } catch (error) {
-    console.error("Error fetching customer data:", error)
-    return []
+    console.error("Error fetching customer data:", error);
+    return [];
   }
 }
